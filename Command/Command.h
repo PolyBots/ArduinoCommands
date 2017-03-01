@@ -14,6 +14,11 @@ class Command
 
   //Accessor/Executor function
   static bool exec(const String&);
+  static void (*ErrorHandler)(const String&);
+  static void SetErrorHandler(void(*err_handler)(const String&));
+
+  // static int (*GetBytesAvailable)();
+  // static void RegisterGetBytesAvailableFunc(int(*func)());
 
   //String-Functionality Constructor
   template<class L> Command(const String&, const L&);

@@ -33,5 +33,15 @@ bool Command::exec(const String& cmdName)
       return true;
     }
   }
+  Command::ErrorHandler(cmdName);
   return false;
+}
+
+void (*Command::ErrorHandler)(const String&) = [](){
+  while(1);
+};
+
+void Command::SetErrorHandler(void (*err_handler)(const String&))
+{
+  Command::ErrorHandler = err_handler;
 }
