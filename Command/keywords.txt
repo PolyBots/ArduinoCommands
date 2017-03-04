@@ -13,6 +13,15 @@ Command	KEYWORD1
 #######################################
 
 exec	KEYWORD2
+streamAvail	KEYWORD2
+streamRead	KEYWORD2
+streamWrite	KEYWORD2
+setErrorHandler	KEYWORD2
+setStreamAvail	KEYWORD2
+setStreamRead	KEYWORD2
+setStreamWrite	KEYWORD2
+hook	KEYWORD2
+echo	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)
@@ -21,4 +30,3 @@ exec	KEYWORD2
 #######################################
 # Constants (LITERAL1)
 #######################################
-

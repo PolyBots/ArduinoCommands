@@ -6,60 +6,74 @@
 #ifndef Command_h
 #define Command_h
 
-#include "WString.h" //for use of String class
+//#include "WString.h" //for use of String class
+#include <string.h>
 
 class Command
 {
-  public:
+public:
 
-  //Accessor/Executor function
-  static bool exec(const String&);
-  static void (*ErrorHandler)(const String&);
-  static void SetErrorHandler(void(*err_handler)(const String&));
+	static bool echo;
 
-  // static int (*GetBytesAvailable)();
-  // static void RegisterGetBytesAvailableFunc(int(*func)());
+	static int (*streamAvail)();
+	static int (*streamRead)();
+	static void (*streamWrite)(const char*);
 
-  //String-Functionality Constructor
-  template<class L> Command(const String&, const L&);
-  ~Command();
+	static void setErrorHandler(void(*)(const char*));
 
-  //Copying and re-assignment of Commands is disabled
-  Command(const Command&) = delete;
-  Command(Command&&) = delete;
-  Command& operator=(const Command&) = delete;
-  Command& operator=(Command&&) = delete;
+	static void setStreamAvail(int(*)());
+	static void setStreamRead(int(*)());
+	static void setStreamWrite(void(*)(const char*));
 
-  private:
+	static bool exec(const char*);
+	static void hook();
 
-  //Used for entries in a static registry
-  //
-  //NOTE: This Node is intended to be later
-  //redesigned so that search time is faster
-  //will likely use a prefix-tree or a radix-tree
-  struct Node
-  {
-    public:
+
+
+	//String-Functionality Constructor
+	template<class L> Command(const char*, const L&);
+	~Command();
+
+	//Copying and re-assignment of Commands is disabled
+	Command(const Command&) = delete;
+	Command(Command&&) = delete;
+	Command& operator=(const Command&) = delete;
+	Command& operator=(Command&&) = delete;
+
+private:
+
+	static void (*errorHandler)(const char*);
+
+	//Used for entries in a static registry
+	//
+	//NOTE: This Node is intended to be later
+	//redesigned so that search time is faster
+	//will likely use a prefix-tree or a radix-tree
+	struct Node;
+
+	//static registry
+	static Node* registry;
+
+	//back of registry
+	static Node** back;
+
+	//instance's entry in registry
+	Node* entry;
+
+	//name and functionality
+	const char* nametag;
+	void* lambda;
+	void (*deleteLambda)(void*);
+	void (*runLambda)(void*);
+};
+
+class Command::Node
+{
+public:
     Node(Command*, Command::Node*);
     
     Command* cmd;
-    Command::Node* next;
-  };
-  
-  //static registry
-  static Node* registry;
-
-  //back of registry
-  static Node** back;
-  
-  //instance's entry in registry
-  Node entry;
-
-  //name and functionality
-  String nametag;
-  void* lambda;
-  void (*deleteLambda)(void*);
-  void (*runLambda)(void*);
+	Command::Node* next;
 };
 
 //String-Functionality Constructor
@@ -76,16 +90,16 @@ class Command
 //(e.g. variables) that are not passed as a parameter (this is
 //referred to as "capturing")
 template<class L>
-Command::Command(const String& nametag, const L& lambda)
-  : entry(this, nullptr),
+inline Command::Command(const char* nametag, const L& lambda)
+  : entry(new Command::Node(this, nullptr)),
     nametag(nametag), lambda(new L(lambda)),
     deleteLambda([](void* l){delete ((L*)l);}),
     runLambda([](void* l){((L*)l)->operator()(); })
 {
-  if(registry == nullptr) registry = &entry;
-  else *back = &entry;
+  if(registry == nullptr) registry = entry;
+  else *back = entry;
 
-  back = &(entry.next);
+  back = &(entry->next);
 }
 
 #endif
