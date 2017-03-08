@@ -1,19 +1,29 @@
 /*
-  Command.h - Command Library for Arduino - Allows user to bind functions to strings and run them
+	Command.h - Command Library for Arduino - Allows user to bind functions to strings and run them
 */
 
 // ensure this library is only included once
 #ifndef Command_h
 #define Command_h
 
-//#include "WString.h" //for use of String class
 #include <string.h>
+#include <stdlib.h>
 
-class Command
+template<class... Args>
+class Command;
+
+template<>
+class Command<>
 {
 public:
 
 	static bool echo;
+
+	static void print(const char*);
+	template<class T>
+	static void print(const T&);
+	template<class T>
+	static void println(const T&);
 
 	static int (*streamAvail)();
 	static int (*streamRead)();
@@ -28,7 +38,9 @@ public:
 	static bool exec(const char*);
 	static void hook();
 
-
+	//Used for converting c-strings to arguments
+	template<class T>
+	static T convertArg(const char*);
 
 	//String-Functionality Constructor
 	template<class L> Command(const char*, const L&);
@@ -40,7 +52,9 @@ public:
 	Command& operator=(const Command&) = delete;
 	Command& operator=(Command&&) = delete;
 
-private:
+protected:
+	//Child-RunLambda-Overload Constructor
+	template<class L> Command(const char*, const L&, void (*)(void*));
 
 	static void (*errorHandler)(const char*);
 
@@ -67,14 +81,30 @@ private:
 	void (*runLambda)(void*);
 };
 
-class Command::Node
+class Command<>::Node
 {
 public:
-    Node(Command*, Command::Node*);
-    
-    Command* cmd;
-	Command::Node* next;
+	Node(Command<>*, Command<>::Node*);
+		
+	Command<>* cmd;
+	Command<>::Node* next;
 };
+
+template<class... Args>
+class Command : public Command<>
+{
+public:
+	//String-Functionality Constructor
+	template<class L> Command(const char*, const L&);
+
+	//Copying and re-assignment of Commands is disabled
+	Command(const Command&) = delete;
+	Command(Command&&) = delete;
+	Command& operator=(const Command&) = delete;
+	Command& operator=(Command&&) = delete;
+};
+
+
 
 //String-Functionality Constructor
 //creates its entry in the registry and registers to it
@@ -89,17 +119,106 @@ public:
 //lambda functions if the lambda functions rely on outside sources
 //(e.g. variables) that are not passed as a parameter (this is
 //referred to as "capturing")
+template<class... Args>
 template<class L>
-inline Command::Command(const char* nametag, const L& lambda)
-  : entry(new Command::Node(this, nullptr)),
-    nametag(nametag), lambda(new L(lambda)),
-    deleteLambda([](void* l){delete ((L*)l);}),
-    runLambda([](void* l){((L*)l)->operator()(); })
+inline Command<Args...>::Command(const char* nametag, const L& lambda)
+	: Command<>(nametag, lambda, [](void* l){
+		char* args[sizeof...(Args)];
+		for(unsigned char i = 0; i < sizeof...(Args); ++i) args[i] = strtok(NULL, " \n");
+		unsigned char index = sizeof...(Args);
+		((L*)l)->operator()(Command<>::convertArg<Args>(args[--index])...);
+	})
 {
-  if(registry == nullptr) registry = entry;
-  else *back = entry;
 
-  back = &(entry->next);
 }
+
+//Child-RunLambda-Overload constructor for Command<>
+template<class L>
+inline Command<>::Command(const char* nametag, const L& lambda, void(*runLambda)(void*))
+	: entry(new Command::Node(this, nullptr)),
+		nametag(nametag), lambda(new L(lambda)),
+		deleteLambda([](void* l){ delete ((L*)l); }),
+		runLambda(runLambda)
+{
+	if(registry == nullptr) registry = entry;
+	else *back = entry;
+
+	back = &(entry->next);
+}
+
+//Specialization of String-Functionality constructor for Command<>
+template<class L>
+inline Command<>::Command(const char* nametag, const L& lambda)
+	: Command(nametag, lambda, [](void*l){ ((L*)l)->operator()(); })
+{
+
+}
+
+
+
+inline void Command<>::print(const char* str)
+{
+	Command<>::streamWrite(str);
+}
+
+template<class T>
+inline void Command<>::print(const T& obj)
+{
+	union {
+		T data;
+		char buf[sizeof(T)];
+	};
+
+	data = obj;
+
+	Command<>::streamWrite(buf);
+}
+
+template<class T>
+inline void Command<>::println(const T& obj)
+{
+	Command<>::print(obj);
+	Command<>::print("\n");
+}
+
+
+
+template<class T>
+inline T Command<>::convertArg(const char* s)
+{
+	return T(s);
+}
+
+template<>
+inline int Command<>::convertArg<int>(const char* s)
+{
+	return atoi(s);
+}
+
+template<>
+inline long Command<>::convertArg<long>(const char* s)
+{
+	return atol(s);
+}
+
+template<>
+inline float Command<>::convertArg<float>(const char* s)
+{
+	return atof(s);
+}
+
+template<>
+inline double Command<>::convertArg<double>(const char* s)
+{
+	return atof(s);
+}
+
+template<>
+inline const char* Command<>::convertArg<const char*>(const char* s)
+{
+	return s;
+}
+
+extern Command<> command;
 
 #endif
