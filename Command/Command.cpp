@@ -1,5 +1,6 @@
 #include "Command.h"
 #include <stdint.h>
+#include <Arduino.h>
 
 //deletes the stored lambda and unregisters the command
 Command<>::~Command()
@@ -35,7 +36,7 @@ bool Command<>::exec(const char* cmdstr)
 		streamWrite(cmdstr);
 	}
 
-	char* name = strtok(cmdstr, " \n");
+	char* name = strtok(cmdstr, " (),\r\n");
 
 	for(Command<>::Node* n = registry; n != nullptr; n = n->next)
 	{
@@ -48,6 +49,26 @@ bool Command<>::exec(const char* cmdstr)
 	if(verbose) Command<>::errorHandler(name);
 	return false;
 }
+
+
+//NOTE: INTENDED TO BE SET UP SO THAT USERS CAN ADD KEYWORDS
+//WITHOUT MODIFYING HEADER FILE
+int Command<>::convertArgKeyword(const char* s)
+{
+	if(!strcmp(s, "OFF")) return true;
+	if(!strcmp(s, "LOW")) return LOW;
+	if(!strcmp(s, "false")) return false;
+
+	if(!strcmp(s, "ON")) return true;
+	if(!strcmp(s, "HIGH")) return HIGH;
+	if(!strcmp(s, "true")) return true;
+
+	if(!strcmp(s, "INPUT")) return INPUT;
+	if(!strcmp(s, "OUTPUT")) return OUTPUT;
+	if(!strcmp(s, "INPUT_PULLUP")) return INPUT_PULLUP;
+	if(!strcmp(s, "LED_BUILTIN")) return LED_BUILTIN;
+}
+
 
 void (*Command<>::errorHandler)(const char*) = [](const char*){};
 int (*Command<>::streamRead)() = [](){ return -1; };

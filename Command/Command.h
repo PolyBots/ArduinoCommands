@@ -128,7 +128,7 @@ inline Command<Args...>::Command(const char* nametag, const L& lambda)
 		for(unsigned char i = 0; i < sizeof...(Args); ++i)
 		{
 			char* arg = strtok(NULL, " (),\r\n");
-			if(strcmp(arg, ""))
+			if(!strcmp(arg, ""))
 			{
 				--i;
 				continue;
@@ -180,19 +180,6 @@ inline void Command<>::println(const T& obj)
 }
 
 
-
-//NOTE: INTENDED TO BE SET UP SO THAT USERS CAN ADD KEYWORDS
-//WITHOUT MODIFYING HEADER FILE
-inline int Command<>::convertArgKeyword(const char* s)
-{
-	if(!strcmp(s, "OFF")) return 0;
-	if(!strcmp(s, "LOW")) return 0;
-	if(!strcmp(s, "false")) return 0;
-
-	if(!strcmp(s, "ON")) return 1;
-	if(!strcmp(s, "HIGH")) return 1;
-	if(!strcmp(s, "true")) return 1;
-}
 
 template<class T>
 inline T Command<>::convertArg(const char* s)
