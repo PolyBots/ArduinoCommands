@@ -169,7 +169,7 @@ inline Command<>::Command(const char* nametag, const L& lambda)
 template<class T>
 inline void Command<>::print(const T& obj)
 {
-	(void(*)(const T&))Command<>::streamWrite(obj);
+	Command<>::streamWrite((const char*)(obj));
 }
 
 template<class T>
