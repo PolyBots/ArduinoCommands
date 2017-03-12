@@ -21,6 +21,7 @@ Command<>::Node::Node(Command<>* cmd, Command<>::Node* next)
 Command<>::Node* Command<>::registry = nullptr;
 Command<>::Node** Command<>::back = nullptr;
 bool Command<>::echo = true;
+bool Command<>::verbose = true;
 
 //Searches through the registry for a nametag that matches "cmdName".
 //If found, runs the command and returns true. If no match is found,
@@ -44,7 +45,7 @@ bool Command<>::exec(const char* cmdstr)
 			return true;
 		}
 	}
-	Command<>::errorHandler(name);
+	if(verbose) Command<>::errorHandler(name);
 	return false;
 }
 
