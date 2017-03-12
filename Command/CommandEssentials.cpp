@@ -54,8 +54,7 @@ Command<unsigned char> cmd_echo(
 Command<unsigned char> cmd_verbose(
 	"verbose", [](unsigned char state)
 	{
-		// command.verbose not yet implemented
-		// command.verbose = state;
+		command.verbose = state;
 	}
 );
 

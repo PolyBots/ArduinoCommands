@@ -8,6 +8,7 @@
 
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h>
 
 template<class... Args>
 class Command;
@@ -18,6 +19,7 @@ class Command<>
 public:
 
 	static bool echo;
+	static bool verbose;
 
 	template<class T>
 	static void print(const T&);
@@ -40,6 +42,8 @@ public:
 	//Used for converting c-strings to arguments
 	template<class T>
 	static T convertArg(const char*);
+
+	static int convertArgKeyword(const char*);
 
 	//String-Functionality Constructor
 	template<class L> Command(const char*, const L&);
@@ -121,7 +125,16 @@ template<class L>
 inline Command<Args...>::Command(const char* nametag, const L& lambda)
 	: Command<>(nametag, lambda, [](void* l){
 		char* args[sizeof...(Args)];
-		for(unsigned char i = 0; i < sizeof...(Args); ++i) args[i] = strtok(NULL, " \n");
+		for(unsigned char i = 0; i < sizeof...(Args); ++i)
+		{
+			char* arg = strtok(NULL, " (),\r\n");
+			if(strcmp(arg, ""))
+			{
+				--i;
+				continue;
+			}
+			args[i] = arg;
+		}
 		unsigned char index = sizeof...(Args);
 		((L*)l)->operator()(Command<>::convertArg<Args>(args[--index])...);
 	})
@@ -168,6 +181,19 @@ inline void Command<>::println(const T& obj)
 
 
 
+//NOTE: INTENDED TO BE SET UP SO THAT USERS CAN ADD KEYWORDS
+//WITHOUT MODIFYING HEADER FILE
+inline int Command<>::convertArgKeyword(const char* s)
+{
+	if(!strcmp(s, "OFF")) return 0;
+	if(!strcmp(s, "LOW")) return 0;
+	if(!strcmp(s, "false")) return 0;
+
+	if(!strcmp(s, "ON")) return 1;
+	if(!strcmp(s, "HIGH")) return 1;
+	if(!strcmp(s, "true")) return 1;
+}
+
 template<class T>
 inline T Command<>::convertArg(const char* s)
 {
@@ -177,12 +203,14 @@ inline T Command<>::convertArg(const char* s)
 template<>
 inline int Command<>::convertArg<int>(const char* s)
 {
+	if(!isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atoi(s);
 }
 
 template<>
 inline long Command<>::convertArg<long>(const char* s)
 {
+	if(!isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atol(s);
 }
 
