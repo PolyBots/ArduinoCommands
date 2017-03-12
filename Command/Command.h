@@ -19,21 +19,20 @@ public:
 
 	static bool echo;
 
-	static void print(const char*);
 	template<class T>
 	static void print(const T&);
 	template<class T>
 	static void println(const T&);
 
-	static int (*streamAvail)();
-	static int (*streamRead)();
-	static void (*streamWrite)(const char*);
-
 	static void setErrorHandler(void(*)(const char*));
-
 	static void setStreamAvail(int(*)());
 	static void setStreamRead(int(*)());
 	static void setStreamWrite(void(*)(const char*));
+
+	static void (*errorHandler)(const char*);
+	static int (*streamAvail)();
+	static int (*streamRead)();
+	static void (*streamWrite)(const char*);
 
 	static bool exec(const char*);
 	static void hook();
@@ -55,8 +54,6 @@ public:
 protected:
 	//Child-RunLambda-Overload Constructor
 	template<class L> Command(const char*, const L&, void (*)(void*));
-
-	static void (*errorHandler)(const char*);
 
 	//Used for entries in a static registry
 	//
@@ -156,29 +153,17 @@ inline Command<>::Command(const char* nametag, const L& lambda)
 
 
 
-inline void Command<>::print(const char* str)
-{
-	Command<>::streamWrite(str);
-}
-
 template<class T>
 inline void Command<>::print(const T& obj)
 {
-	union {
-		T data;
-		char buf[sizeof(T)];
-	};
-
-	data = obj;
-
-	Command<>::streamWrite(buf);
+	(void(*)(const T&))Command<>::streamWrite(obj);
 }
 
 template<class T>
 inline void Command<>::println(const T& obj)
 {
 	Command<>::print(obj);
-	Command<>::print("\n");
+	Command<>::print("\r\n");
 }
 
 
