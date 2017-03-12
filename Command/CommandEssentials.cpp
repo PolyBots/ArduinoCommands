@@ -1,36 +1,36 @@
 #include "CommandEssentials.h"
 #include "Arduino.h"
 
-Command<unsigned char, unsigned char> cmd_pinMode(
-	"pinMode", [](unsigned char pin, unsigned char mode)
+Command<int, int> cmd_pinMode(
+	"pinMode", [](int pin, int mode)
 	{
 		pinMode(pin, mode);
 	}
 );
 
-Command<unsigned char, unsigned char> cmd_digitalWrite(
-	"digitalWrite", [](unsigned char pin, unsigned char value)
+Command<int, int> cmd_digitalWrite(
+	"digitalWrite", [](int pin, int value)
 	{
 		digitalWrite(pin, value);
 	}
 );
 
-Command<unsigned char, unsigned char> cmd_analogWrite(
-	"analogWrite", [](unsigned char pin, unsigned char value)
+Command<int, int> cmd_analogWrite(
+	"analogWrite", [](int pin, int value)
 	{
 		analogWrite(pin, value);
 	}
 );
 
-Command<unsigned char> cmd_digitalRead(
-	"digitalRead", [](unsigned char pin)
+Command<int> cmd_digitalRead(
+	"digitalRead", [](int pin)
 	{
 		command.println(digitalRead(pin));
 	}
 );
 
-Command<unsigned char> cmd_analogRead(
-	"analogRead", [](unsigned char pin)
+Command<int> cmd_analogRead(
+	"analogRead", [](int pin)
 	{
 		command.println(analogRead(pin));
 	}
@@ -44,15 +44,15 @@ Command<> cmd_restart(
 	}
 );
 
-Command<unsigned char> cmd_echo(
-	"echo", [](unsigned char state)
+Command<int> cmd_echo(
+	"echo", [](int state)
 	{
 		command.echo = state;
 	}
 );
 
-Command<unsigned char> cmd_verbose(
-	"verbose", [](unsigned char state)
+Command<int> cmd_verbose(
+	"verbose", [](int state)
 	{
 		command.verbose = state;
 	}
