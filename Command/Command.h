@@ -6,60 +6,77 @@
 #ifndef Command_h
 #define Command_h
 
-#include <string.h>
-#include <stdlib.h>
-#include <ctype.h>
 
+#include <string.h>  // strcmp, strtok, strcpy
+#include <stdlib.h>  
+#include <ctype.h>  // isdigit
+
+// empty class definition meant to prevent compilation when used incorrectly
 template<class... Args>
 class Command;
 
+// top of Command class hierarchy, no template parameters
 template<>
 class Command<>
 {
 public:
 
+	// enables commands to be printed back, arduino serial monitor does not do this
+	// initially set to true
 	static bool echo;
+	// enables errorhandler, initially set to true
 	static bool verbose;
 
+	// interfaces to print and println using streamwrite
 	template<class T>
 	static void print(const T&);
 	template<class T>
 	static void println(const T&);
 
+	// setters for function pointers
 	static void setErrorHandler(void(*)(const char*));
 	static void setStreamAvail(int(*)());
 	static void setStreamRead(int(*)());
 	static void setStreamWrite(void(*)(const char*));
 
+	// function pointers
 	static void (*errorHandler)(const char*);
 	static int (*streamAvail)();
 	static int (*streamRead)();
 	static void (*streamWrite)(const char*);
 
+	// searches and executes commands/functions based on c-string
 	static bool exec(const char*);
+	// reads serial input and calls exec after newline character
 	static void hook();
 
 	//Used for converting c-strings to arguments
 	template<class T>
 	static T convertArg(const char*);
-
+	// specifically for integers. converts special keywords to integers
 	static int convertArgKeyword(const char*);
 
-	//String-Functionality Constructor
-	template<class L> Command(const char*, const L&);
-	~Command();
+	// templated String-Functionality Constructor
+	template<class L>
+	Command(const char*, const L&);
+	~Command();  // deconstructor
 
 	//Copying and re-assignment of Commands is disabled
-	Command(const Command&) = delete;
-	Command(Command&&) = delete;
-	Command& operator=(const Command&) = delete;
-	Command& operator=(Command&&) = delete;
+	Command(const Command<>&) = delete; // no copy constructor
+	Command(Command<>&&) = delete; // no move copy constructor
+	Command& operator=(const Command<>&) = delete; // no assignment operator. not allowed to redefine Command objects
+	Command& operator=(Command<>&&) = delete; // no move assignment operator. not allowed to redefine Command objects
 
-	template<class... Args> void operator()(const Args&...);
+	// call the Command object like a function (functor)
+	template<class... Args>
+	void operator()(const Args&...);
 
 protected:
 	//Child-RunLambda-Overload Constructor
-	template<class L> Command(const char*, const L&, void (*)(void*), void (*)(void*, void*[]));
+	// for child classes to overload runLambda() and invLambda(), uses void pointers
+	// to point to both the lambda and the parameters to be passed to the lambda function
+	template<class L>
+	Command(const char*, const L&, void (*)(void*), void (*)(void*, void*[])); // magic
 
 	//Used for entries in a static registry
 	//
