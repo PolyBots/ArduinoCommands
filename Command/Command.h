@@ -55,9 +55,11 @@ public:
 	Command& operator=(const Command&) = delete;
 	Command& operator=(Command&&) = delete;
 
+	template<class... Args> void operator()(const Args&...);
+
 protected:
 	//Child-RunLambda-Overload Constructor
-	template<class L> Command(const char*, const L&, void (*)(void*));
+	template<class L> Command(const char*, const L&, void (*)(void*), void (*)(void*, void*[]));
 
 	//Used for entries in a static registry
 	//
@@ -80,6 +82,7 @@ protected:
 	void* lambda;
 	void (*deleteLambda)(void*);
 	void (*runLambda)(void*);
+	void (*invLambda)(void*, void*[]);
 };
 
 class Command<>::Node
@@ -137,6 +140,9 @@ inline Command<Args...>::Command(const char* nametag, const L& lambda)
 		}
 		unsigned char index = sizeof...(Args);
 		((L*)l)->operator()(Command<>::convertArg<Args>(args[--index])...);
+	}, [](void* l, void* a[]){
+		unsigned char index = sizeof...(Args);
+		((L*)l)->operator()((*(Args*)(a[--index]))...);
 	})
 {
 
@@ -144,11 +150,11 @@ inline Command<Args...>::Command(const char* nametag, const L& lambda)
 
 //Child-RunLambda-Overload constructor for Command<>
 template<class L>
-inline Command<>::Command(const char* nametag, const L& lambda, void(*runLambda)(void*))
+inline Command<>::Command(const char* nametag, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
 	: entry(new Command::Node(this, nullptr)),
 		nametag(nametag), lambda(new L(lambda)),
 		deleteLambda([](void* l){ delete ((L*)l); }),
-		runLambda(runLambda)
+		runLambda(runLambda), invLambda(invLambda)
 {
 	if(registry == nullptr) registry = entry;
 	else *back = entry;
@@ -159,9 +165,20 @@ inline Command<>::Command(const char* nametag, const L& lambda, void(*runLambda)
 //Specialization of String-Functionality constructor for Command<>
 template<class L>
 inline Command<>::Command(const char* nametag, const L& lambda)
-	: Command(nametag, lambda, [](void*l){ ((L*)l)->operator()(); })
+	: Command(nametag, lambda,
+		[](void*l){ ((L*)l)->operator()(); },
+		[](void* l, void* a[]){ ((L*)l)->operator()(); })
 {
 
+}
+
+
+
+template<class... Args>
+void Command<>::operator()(const Args&... args)
+{
+	void* argList[] = { &args... };
+	invLambda(lambda, argList);
 }
 
 
@@ -190,14 +207,14 @@ inline T Command<>::convertArg(const char* s)
 template<>
 inline int Command<>::convertArg<int>(const char* s)
 {
-	if(!isdigit(s[0])) return Command<>::convertArgKeyword(s);
+	if(s[0] != '-' && !isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atoi(s);
 }
 
 template<>
 inline long Command<>::convertArg<long>(const char* s)
 {
-	if(!isdigit(s[0])) return Command<>::convertArgKeyword(s);
+	if(s[0] != '-' && !isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atol(s);
 }
 
