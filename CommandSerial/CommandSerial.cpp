@@ -1,12 +1,12 @@
 #include "CommandSerial.h"
 #include "Arduino.h"
 
-void commandSetupSerial(usigned int baud)
+void commandSerialSetup(usigned int baud)
 {
-	// Set up UART (Serial) monitor at 9600 baud, 8n1:
+	// Set up UART (Serial) monitor at set baud rate
 	Serial.begin(baud);
 
-	// Register our error handler with the Command interface
+	// Register error handler with the Command interface
 	command.setErrorHandler(
 		[](const char* s){
 			command.streamWrite("ERROR: ");
@@ -16,12 +16,12 @@ void commandSetupSerial(usigned int baud)
 		}
 	);
 
-	// Register our stream availability function with the Command interface
+	// Register stream availability function with the Command interface
 	command.setStreamAvail([](){return Serial.available();});
 
-	// Register our stream read function with the Command interface
+	// Register stream read function with the Command interface
 	command.setStreamRead([](){return Serial.read();});
 
-	// Register our stream write function with the Command interface
+	// Register stream write function with the Command interface
 	command.setStreamWrite([](const char* s){Serial.write(s);});
 }
