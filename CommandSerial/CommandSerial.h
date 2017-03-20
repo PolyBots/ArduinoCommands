@@ -3,6 +3,6 @@
 
 #include "Command.h"
 
-extern void commandSetupSerial(unsigned int = 9600);
+extern void commandSerialSetup(unsigned int = 9600);
 
 #endif
