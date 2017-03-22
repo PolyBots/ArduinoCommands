@@ -1,7 +1,7 @@
 #include "CommandSerial.h"
 #include "Arduino.h"
 
-void commandSerialSetup(usigned int baud)
+void commandSerialSetup(unsigned int baud)
 {
 	// Set up UART (Serial) monitor at set baud rate
 	Serial.begin(baud);
