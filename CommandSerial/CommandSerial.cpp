@@ -9,10 +9,10 @@ void commandSerialSetup(unsigned int baud)
 	// Register error handler with the Command interface
 	command.setErrorHandler(
 		[](const char* s){
-			command.streamWrite("ERROR: ");
-			command.streamWrite("\"");
-			command.streamWrite(s);
-			command.streamWrite("\" is not a valid command!\n");
+			command.print("ERROR: ");
+			command.print("\"");
+			command.print(s);
+			command.println("\" is not a valid command!");
 		}
 	);
 
@@ -23,5 +23,5 @@ void commandSerialSetup(unsigned int baud)
 	command.setStreamRead([](){return Serial.read();});
 
 	// Register stream write function with the Command interface
-	command.setStreamWrite([](const char* s){Serial.write(s);});
+	command.setStreamWrite([](const char* s){return Serial.write(s);});
 }
