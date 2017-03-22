@@ -25,7 +25,8 @@ Command<int, int> cmd_analogWrite(
 Command<int> cmd_digitalRead(
 	"digitalRead", [](int pin)
 	{
-		command.println(digitalRead(pin));
+		if(digitalRead(pin)) command.println("HIGH");
+		else command.println("LOW");
 	}
 );
 
@@ -36,11 +37,12 @@ Command<int> cmd_analogRead(
 	}
 );
 
-Command<> cmd_restart(
-	"restart", []()
+Command<> cmd_reset(
+	"reset", []()
 	{
-		// best implementation not yet decided
-		// asm volatile("jmp 0");
+		void(*reset)(void) = 0;
+		cmd_clearScreen();
+		reset();
 	}
 );
 
@@ -61,13 +63,11 @@ Command<int> cmd_verbose(
 Command<> cmd_clearScreen(
 	"clearScreen", []()
 	{
-		// best implementation not yet decided
+		//place a bunch of new lines in case the monitor in question does not support the form feed character (e.g. Arduino Serial Monitor)
+		for(int i = 0; i < 16; ++i) command.print("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n");
 
-		// command.print(12);	// form feed ASCII character
-								// not supported on Arduino Serial Monitor
-								// but is supported on others like PuTTY
-
-		// supported on all serial terminals, but doesn't look as nice
-		// for(int i = 0; i < 64; ++i) command.print("\r\n");
+		command.print(12);	// form feed ASCII character
+							// not supported on Arduino Serial Monitor
+							// but is supported on others like PuTTY
 	}
 );
