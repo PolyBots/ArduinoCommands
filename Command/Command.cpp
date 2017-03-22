@@ -8,7 +8,7 @@ Command<>::~Command()
 	deleteLambda(lambda);
 	
 	Command::Node* n = registry;
-	while(n->next != &entry) n = n->next;
+	while(n->next != entry) n = n->next;
 	n->next = n->next->next;
 }
 
@@ -21,6 +21,7 @@ Command<>::Node::Node(Command<>* cmd, Command<>::Node* next)
 
 Command<>::Node* Command<>::registry = nullptr;
 Command<>::Node** Command<>::back = nullptr;
+const size_t Command<>::bufferSize = 64;
 bool Command<>::echo = true;
 bool Command<>::verbose = true;
 
@@ -29,14 +30,16 @@ bool Command<>::verbose = true;
 //returns false.
 bool Command<>::exec(const char* cmdstr)
 {
+	char cmdbuf[bufferSize];
+	strcpy(cmdbuf, cmdstr);
 	//print back command if echo is on
 	if(echo)
 	{
 		streamWrite("> ");
-		streamWrite(cmdstr);
+		streamWrite(cmdbuf);
 	}
 
-	char* name = strtok(cmdstr, " (),\r\n");
+	char* name = strtok(cmdbuf, " (),\r\n");
 
 	for(Command<>::Node* n = registry; n != nullptr; n = n->next)
 	{
@@ -55,7 +58,7 @@ bool Command<>::exec(const char* cmdstr)
 //WITHOUT MODIFYING HEADER FILE
 int Command<>::convertArgKeyword(const char* s)
 {
-	if(!strcmp(s, "OFF")) return true;
+	if(!strcmp(s, "OFF")) return false;
 	if(!strcmp(s, "LOW")) return LOW;
 	if(!strcmp(s, "false")) return false;
 
@@ -67,6 +70,7 @@ int Command<>::convertArgKeyword(const char* s)
 	if(!strcmp(s, "OUTPUT")) return OUTPUT;
 	if(!strcmp(s, "INPUT_PULLUP")) return INPUT_PULLUP;
 	if(!strcmp(s, "LED_BUILTIN")) return LED_BUILTIN;
+	return 0;
 }
 
 
@@ -94,7 +98,7 @@ void Command<>::setStreamWrite(void(*stream_write)(const char*))
 
 void Command<>::hook()
 {
-	static char buf[64] = "";
+	static char buf[bufferSize] = "";
 
 	if(streamAvail())
 	{

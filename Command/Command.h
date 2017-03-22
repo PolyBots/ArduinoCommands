@@ -27,6 +27,9 @@ public:
 	// enables errorhandler, initially set to true
 	static bool verbose;
 
+	//size of input buffer (in bytes)
+	static const size_t bufferSize;
+
 	// interfaces to print and println using streamwrite
 	template<class T>
 	static void print(const T&);
@@ -59,7 +62,7 @@ public:
 	// templated String-Functionality Constructor
 	template<class L>
 	Command(const char*, const L&);
-	~Command();  // deconstructor
+	virtual ~Command();  // deconstructor
 
 	//Copying and re-assignment of Commands is disabled
 	Command(const Command<>&) = delete; // no copy constructor
