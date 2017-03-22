@@ -2,6 +2,14 @@
 #include <stdint.h>
 #include <Arduino.h>
 
+//Alternate to String-functionality constructor (uses function pointer
+//instead of lambda)
+Command<>::Command(const char* nametag, void(*func)())
+	: Command(nametag, [&](){ func(); })
+{
+
+}
+
 //deletes the stored lambda and unregisters the command
 Command<>::~Command()
 {

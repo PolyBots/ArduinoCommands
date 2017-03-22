@@ -70,6 +70,7 @@ public:
 	// templated String-Functionality Constructor
 	template<class L>
 	Command(const char*, const L&);
+	Command(const char*, void(*)());
 	virtual ~Command();  // deconstructor
 
 	//Copying and re-assignment of Commands is disabled
@@ -128,6 +129,7 @@ class Command : public Command<>
 public:
 	//String-Functionality Constructor
 	template<class L> Command(const char*, const L&);
+	Command(const char*, void(*)(Args...));
 
 	//Copying and re-assignment of Commands is disabled
 	Command(const Command&) = delete;
@@ -172,6 +174,15 @@ inline Command<Args...>::Command(const char* nametag, const L& lambda)
 		unsigned char index = sizeof...(Args);
 		((L*)l)->operator()((*(Args*)(a[--index]))...);
 	})
+{
+
+}
+
+//Alternate to String-functionality constructor (uses function pointer
+//instead of lambda)
+template<class... Args>
+Command<Args...>::Command(const char* nametag, void(*func)(Args...))
+	: Command<Args...>(nametag, [&](Args... args) { func(args...); })
 {
 
 }
