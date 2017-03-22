@@ -8,8 +8,10 @@
 
 
 #include <string.h>  // strcmp, strtok, strcpy
-#include <stdlib.h>  
+#include <stdlib.h>  // atoi
 #include <ctype.h>  // isdigit
+#include <limits.h> // INT_MAX, LONG_MAX
+#include <math.h> // log10, isnan, isinf
 
 // empty class definition meant to prevent compilation when used incorrectly
 template<class... Args>
@@ -31,22 +33,28 @@ public:
 	static const size_t bufferSize;
 
 	// interfaces to print and println using streamwrite
+	static size_t print(const char*);
+	static size_t print(char);
+	static size_t print(int, unsigned char = 10);
+	static size_t print(long, unsigned char = 10);
+	static size_t print(float, unsigned char = 2);
+	static size_t print(double, unsigned char = 2);
+
+	static size_t println(const char* = "");
 	template<class T>
-	static void print(const T&);
-	template<class T>
-	static void println(const T&);
+	static size_t println(const T&, unsigned char = 0);
 
 	// setters for function pointers
 	static void setErrorHandler(void(*)(const char*));
 	static void setStreamAvail(int(*)());
 	static void setStreamRead(int(*)());
-	static void setStreamWrite(void(*)(const char*));
+	static void setStreamWrite(size_t(*)(const char*));
 
 	// function pointers
 	static void (*errorHandler)(const char*);
 	static int (*streamAvail)();
 	static int (*streamRead)();
-	static void (*streamWrite)(const char*);
+	static size_t (*streamWrite)(const char*);
 
 	// searches and executes commands/functions based on c-string
 	static bool exec(const char*);
@@ -201,19 +209,13 @@ void Command<>::operator()(const Args&... args)
 	invLambda(lambda, argList);
 }
 
-
-
 template<class T>
-inline void Command<>::print(const T& obj)
+inline size_t Command<>::println(const T& obj, unsigned char baseOrPrecision)
 {
-	Command<>::streamWrite((const char*)(obj));
-}
-
-template<class T>
-inline void Command<>::println(const T& obj)
-{
-	Command<>::print(obj);
-	Command<>::print("\r\n");
+	
+	if(baseOrPrecision == 0) return Command<>::print(obj) + Command<>::print("\r\n");;
+	
+	return Command<>::print(obj, baseOrPrecision) + Command<>::print("\r\n");;
 }
 
 
@@ -239,15 +241,15 @@ inline long Command<>::convertArg<long>(const char* s)
 }
 
 template<>
-inline float Command<>::convertArg<float>(const char* s)
+inline double Command<>::convertArg<double>(const char* s)
 {
 	return atof(s);
 }
 
 template<>
-inline double Command<>::convertArg<double>(const char* s)
+inline float Command<>::convertArg<float>(const char* s)
 {
-	return atof(s);
+	return Command<>::convertArg<double>(s);
 }
 
 template<>

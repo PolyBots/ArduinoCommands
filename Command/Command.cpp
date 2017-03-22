@@ -53,6 +53,74 @@ bool Command<>::exec(const char* cmdstr)
 	return false;
 }
 
+size_t Command<>::print(const char* str)
+{
+	return Command<>::streamWrite(str);
+}
+
+size_t Command<>::print(char c)
+{
+	const char buf[2] = {c, '\0'};
+	return Command<>::streamWrite(buf);
+}
+
+size_t Command<>::print(int num, unsigned char base)
+{
+	unsigned char bufSize = (unsigned char)(log(double(INT_MAX))/log(double(base))) + 1U;
+	char buf[bufSize];
+	return Command<>::streamWrite(itoa(num, buf, base));
+}
+
+size_t Command<>::print(long num, unsigned char base)
+{
+	unsigned char bufSize = (unsigned char)(log(double(LONG_MAX))/log(double(base))) + 1U;
+	char buf[bufSize];
+	return Command<>::streamWrite(ltoa(num, buf, base));
+}
+
+size_t Command<>::print(double num, unsigned char precision)
+{
+	if (isnan(num)) return Command<>::print("nan");
+	if (isinf(num)) return Command<>::print("inf");
+
+	size_t n = 0;
+
+	//negative checking
+	if (num < 0.0)
+	{
+		n += Command<>::print("-");
+		num = -num; //we invert number here so that we can print the rest of the number correctly
+	}
+
+	//rounds number to nearest decimal at precision
+	num += 0.5 * pow(10, double(-precision));
+
+	//prints the integer part
+	n += Command<>::print(int(num));
+	//reduces num to just decimal part
+	num -= int(num);
+
+	//prints the decimal point
+	n += Command<>::print(".");
+
+	//makes the decimal part into an integer part for purposes of printing
+	num *= pow(10, double(precision));
+	//prints the decimal part
+	n += Command<>::print(int(num));
+
+	return n;
+}
+
+size_t Command<>::print(float num, unsigned char precision)
+{
+	return Command<>::print(double(num), precision);
+}
+
+size_t Command<>::println(const char* str)
+{
+	return Command<>::print(str) + Command<>::print("\r\n");
+}
+
 
 //NOTE: INTENDED TO BE SET UP SO THAT USERS CAN ADD KEYWORDS
 //WITHOUT MODIFYING HEADER FILE
@@ -77,7 +145,7 @@ int Command<>::convertArgKeyword(const char* s)
 void (*Command<>::errorHandler)(const char*) = [](const char*){};
 int (*Command<>::streamRead)() = [](){ return -1; };
 int (*Command<>::streamAvail)() = [](){ return 0; };
-void (*Command<>::streamWrite)(const char*) = [](const char*){};
+size_t (*Command<>::streamWrite)(const char*) = [](const char*) -> size_t { return 0; };
 
 void Command<>::setErrorHandler(void (*err_handler)(const char*))
 {
@@ -91,7 +159,7 @@ void Command<>::setStreamRead(int(*stream_read)())
 {
 	Command<>::streamRead = stream_read;
 }
-void Command<>::setStreamWrite(void(*stream_write)(const char*))
+void Command<>::setStreamWrite(size_t(*stream_write)(const char*))
 {
 	Command<>::streamWrite = stream_write;
 }
