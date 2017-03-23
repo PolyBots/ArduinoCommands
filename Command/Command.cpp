@@ -4,8 +4,8 @@
 
 //Alternate to String-functionality constructor (uses function pointer
 //instead of lambda)
-Command<>::Command(const char* nametag, void(*func)())
-	: Command(nametag, [&](){ func(); })
+Command<>::Command(const char* signature, void(*func)())
+	: Command(signature, [&](){ func(); })
 {
 
 }
@@ -33,7 +33,7 @@ const size_t Command<>::bufferSize = 64;
 bool Command<>::echo = true;
 bool Command<>::verbose = true;
 
-//Searches through the registry for a nametag that matches "cmdName".
+//Searches through the registry for a signature that matches "cmdName".
 //If found, runs the command and returns true. If no match is found,
 //returns false.
 bool Command<>::exec(const char* cmdstr)
@@ -49,16 +49,42 @@ bool Command<>::exec(const char* cmdstr)
 
 	char* name = strtok(cmdbuf, " (),\r\n");
 
-	for(Command<>::Node* n = registry; n != nullptr; n = n->next)
+	Command<>* cmd = Command<>::find(name);
+	if(cmd)
 	{
-		if(!strcmp(name, n->cmd->nametag))
-		{
-			n->cmd->runLambda(n->cmd->lambda);
-			return true;
-		}
+		cmd->runLambda(cmd->lambda);
+		return true;
 	}
+
 	if(verbose) Command<>::errorHandler(name);
 	return false;
+}
+
+Command<>* Command<>::find(const char* name)
+{
+	for(Command<>::Node* n = registry; n != nullptr; n = n->next)
+	{
+		if(!strncmp(name, n->cmd->signature, strlen(name))) return n->cmd;
+	}
+	return nullptr;
+}
+
+void Command<>::help()
+{
+	for(Command<>::Node* n = registry; n != nullptr; n = n->next) Command<>::println(n->cmd->getSignature());
+}
+
+void Command<>::help(const char* name)
+{
+	Command<>* cmd = Command<>::find(name);
+	if(cmd)
+	{
+		Command<>::println(cmd->getSignature());
+		if(cmd->getDesc()) Command<>::println(cmd->getDesc());
+		else Command<>::println("No description available.");
+		return;
+	}
+	Command<>::errorHandler(name);
 }
 
 size_t Command<>::print(const char* str)
@@ -198,4 +224,31 @@ void Command<>::hook()
 	}
 }
 
-Command<> command("", [](){});
+const char* Command<>::getSignature() const
+{
+	return signature;
+}
+
+const char* Command<>::getDesc() const
+{
+	return description;
+}
+
+Command<const char*> command("help", [](const char* str){
+	Command<>::println("Available Commands (type \"help\" followed by a command name for more info on the command\":");
+	if(!str) Command<>::help();
+	else Command<>::help(str);
+});
+
+(
+Command<int> cmd_echo("echo", [](int state)
+	{
+		Command<>::echo = state;
+	}
+);
+
+Command<int> cmd_verbose("verbose", [](int state)
+	{
+		Command<>::verbose = state;
+	}
+);
