@@ -7,8 +7,8 @@
 #define Command_h
 
 
-#include <string.h>  // strcmp, strncmp, strtok, strcpy, strcat
-#include <stdlib.h>  // atoi, atol, atof
+#include <string.h>  // strcmp, strtok, strcpy
+#include <stdlib.h>  // atoi
 #include <ctype.h>  // isdigit
 #include <limits.h> // INT_MAX, LONG_MAX
 #include <math.h> // log10, isnan, isinf
@@ -58,9 +58,6 @@ public:
 
 	// searches and executes commands/functions based on c-string
 	static bool exec(const char*);
-
-	static Command<>* find(const char*);
-
 	// reads serial input and calls exec after newline character
 	static void hook();
 
@@ -86,12 +83,6 @@ public:
 	template<class... Args>
 	void operator()(const Args&...);
 
-	const char* getSignature() const;
-	const char* getDesc() const;
-
-	static void help();
-	static void help(const char*);
-
 protected:
 	//Child-RunLambda-Overload Constructor
 	// for child classes to overload runLambda() and invLambda(), uses void pointers
@@ -116,8 +107,7 @@ protected:
 	Node* entry;
 
 	//name and functionality
-	const char* signature;
-	const char* description;
+	const char* nametag;
 	void* lambda;
 	void (*deleteLambda)(void*);
 	void (*runLambda)(void*);
@@ -165,14 +155,12 @@ public:
 //referred to as "capturing")
 template<class... Args>
 template<class L>
-inline Command<Args...>::Command(const char* signature, const L& lambda)
-	: Command<>(signature, lambda, [](void* l){
+inline Command<Args...>::Command(const char* nametag, const L& lambda)
+	: Command<>(nametag, lambda, [](void* l){
 		char* args[sizeof...(Args)];
-		for(unsigned char i = 0; i < sizeof...(Args); ++i) args[i] = nullptr;
 		for(unsigned char i = 0; i < sizeof...(Args); ++i)
 		{
 			char* arg = strtok(NULL, " (),\r\n");
-			if(!arg) break;
 			if(!strcmp(arg, ""))
 			{
 				--i;
@@ -193,17 +181,17 @@ inline Command<Args...>::Command(const char* signature, const L& lambda)
 //Alternate to String-functionality constructor (uses function pointer
 //instead of lambda)
 template<class... Args>
-Command<Args...>::Command(const char* signature, void(*func)(Args...))
-	: Command<Args...>(signature, [&](Args... args) { func(args...); })
+Command<Args...>::Command(const char* nametag, void(*func)(Args...))
+	: Command<Args...>(nametag, [&](Args... args) { func(args...); })
 {
 
 }
 
 //Child-RunLambda-Overload constructor for Command<>
 template<class L>
-inline Command<>::Command(const char* signature, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
+inline Command<>::Command(const char* nametag, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
 	: entry(new Command::Node(this, nullptr)),
-		signature(signature), lambda(new L(lambda)),
+		nametag(nametag), lambda(new L(lambda)),
 		deleteLambda([](void* l){ delete ((L*)l); }),
 		runLambda(runLambda), invLambda(invLambda)
 {
@@ -215,8 +203,8 @@ inline Command<>::Command(const char* signature, const L& lambda, void(*runLambd
 
 //Specialization of String-Functionality constructor for Command<>
 template<class L>
-inline Command<>::Command(const char* signature, const L& lambda)
-	: Command(signature, lambda,
+inline Command<>::Command(const char* nametag, const L& lambda)
+	: Command(nametag, lambda,
 		[](void*l){ ((L*)l)->operator()(); },
 		[](void* l, void* a[]){ ((L*)l)->operator()(); })
 {
@@ -246,14 +234,12 @@ inline size_t Command<>::println(const T& obj, unsigned char baseOrPrecision)
 template<class T>
 inline T Command<>::convertArg(const char* s)
 {
-	if(!s) return T();
 	return T(s);
 }
 
 template<>
 inline int Command<>::convertArg<int>(const char* s)
 {
-	if(!s) return 0;
 	if(s[0] != '-' && !isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atoi(s);
 }
@@ -261,7 +247,6 @@ inline int Command<>::convertArg<int>(const char* s)
 template<>
 inline long Command<>::convertArg<long>(const char* s)
 {
-	if(!s) return 0;
 	if(s[0] != '-' && !isdigit(s[0])) return Command<>::convertArgKeyword(s);
 	return atol(s);
 }
@@ -269,32 +254,21 @@ inline long Command<>::convertArg<long>(const char* s)
 template<>
 inline double Command<>::convertArg<double>(const char* s)
 {
-	if(!s) return 0;
 	return atof(s);
 }
 
 template<>
 inline float Command<>::convertArg<float>(const char* s)
 {
-	if(!s) return 0;
 	return Command<>::convertArg<double>(s);
 }
 
 template<>
 inline const char* Command<>::convertArg<const char*>(const char* s)
 {
-	if(!s) return nullptr;
 	return s;
 }
 
-//doubles as easy command static function syntax
-//and as "help" command
-extern Command<const char*> command;
-
-//command to turn echo on/off
-extern Command<int> cmd_echo;
-
-//command to turn verbose on/off
-extern Command<int> cmd_verbose;
+extern Command<> command;
 
 #endif
