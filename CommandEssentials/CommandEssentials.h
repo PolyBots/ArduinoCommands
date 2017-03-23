@@ -13,8 +13,6 @@ extern Command<int> cmd_analogRead;
 
 extern Command<> cmd_restart;
 
-extern Command<int> cmd_echo;
-extern Command<int> cmd_verbose;
 extern Command<> cmd_clearScreen;
 
 #endif

@@ -46,20 +46,6 @@ Command<> cmd_reset(
 	}
 );
 
-Command<int> cmd_echo(
-	"echo", [](int state)
-	{
-		command.echo = state;
-	}
-);
-
-Command<int> cmd_verbose(
-	"verbose", [](int state)
-	{
-		command.verbose = state;
-	}
-);
-
 Command<> cmd_clearScreen(
 	"clearScreen", []()
 	{
