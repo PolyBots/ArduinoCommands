@@ -12,7 +12,7 @@ void commandSerialSetup(unsigned int baud)
 			command.print("ERROR: ");
 			command.print("\"");
 			command.print(s);
-			command.println("\" is not a valid command!");
+			command.println("\" is not a valid command! Type \"help\" to see a list of commands.");
 		}
 	);
 
