@@ -1,11 +1,18 @@
 #include "Command.h"
 #include <stdint.h>
+#include <math.h>
 #include <Arduino.h>
 
 //Alternate to String-functionality constructor (uses function pointer
 //instead of lambda)
+Command<>::Command(const char* signature, const char* description, void(*func)())
+	: Command(signature, description, [&](){ func(); })
+{
+
+}
+
 Command<>::Command(const char* signature, void(*func)())
-	: Command(signature, [&](){ func(); })
+	: Command(signature, nullptr, func)
 {
 
 }
@@ -16,8 +23,16 @@ Command<>::~Command()
 	deleteLambda(lambda);
 	
 	Command::Node* n = registry;
-	while(n->next != entry) n = n->next;
-	n->next = n->next->next;
+	if(registry == entry)
+	{
+		registry = registry->next;
+	}
+	else
+	{
+		while(n->next != entry) n = n->next;
+		n->next = n->next->next;
+	}
+	delete entry;
 }
 
 //pretty straight forward...
@@ -28,10 +43,39 @@ Command<>::Node::Node(Command<>* cmd, Command<>::Node* next)
 }
 
 Command<>::Node* Command<>::registry = nullptr;
+Command<>::Node* Command<>::dynReg = nullptr;
 Command<>::Node** Command<>::back = nullptr;
+Command<>::Node** Command<>::dynBack = nullptr;
 const size_t Command<>::bufferSize = 64;
 bool Command<>::echo = true;
 bool Command<>::verbose = true;
+
+// void* Command<>::operator new(size_t s)
+// {
+// 	void* result = ::operator new(s);
+// 	Command<>::Node* e = ((Command<>*)result)->entry;
+// 	if(dynReg == nullptr) dynReg = e;
+// 	else *dynBack = e;
+
+// 	dynBack = &(e->next);
+
+// 	return result;
+// }
+
+// void Command<>::operator delete(void* p)
+// {
+// 	Command<>* c = p;
+// 	Command<>::Node* n = dynReg;
+// 	if(!dynReg) return;
+// 	if(dynReg = c->entry)
+// 	{
+// 		dynReg = dynReg->next;
+// 		return;
+// 	}
+// 	while(n->next != c->entry && n->next->next != nullptr) n = n->next;
+// 	n->next = n->next->next;
+// 	::operator delete(p);
+// }
 
 //Searches through the registry for a signature that matches "cmdName".
 //If found, runs the command and returns true. If no match is found,
@@ -49,6 +93,13 @@ bool Command<>::exec(const char* cmdstr)
 
 	char* name = strtok(cmdbuf, " (),\r\n");
 
+	if(!strcmp(name, "help"))
+	{
+		char* argCmd = strtok(NULL, " (),\r\n");
+		Command<>::help(argCmd);
+		return true;
+	}
+
 	Command<>* cmd = Command<>::find(name);
 	if(cmd)
 	{
@@ -64,18 +115,26 @@ Command<>* Command<>::find(const char* name)
 {
 	for(Command<>::Node* n = registry; n != nullptr; n = n->next)
 	{
-		if(!strncmp(name, n->cmd->signature, strlen(name))) return n->cmd;
+		if(!strncmp(name, n->cmd->getSignature(), n->cmd->nameLength)) return n->cmd;
 	}
 	return nullptr;
 }
 
-void Command<>::help()
-{
-	for(Command<>::Node* n = registry; n != nullptr; n = n->next) Command<>::println(n->cmd->getSignature());
-}
-
 void Command<>::help(const char* name)
 {
+	if(!name)
+	{
+		Command<>::println("Available Commands (type \"help\" followed by a command name for more info on the command):");
+		for(Command<>::Node* n = registry; n != nullptr; n = n->next)
+		{
+			char sig[n->cmd->nameLength+1];
+			strncpy(sig, n->cmd->getSignature(), n->cmd->nameLength);
+			sig[n->cmd->nameLength] = '\0';
+			Command<>::println(sig);
+		}
+		return;
+	}
+
 	Command<>* cmd = Command<>::find(name);
 	if(cmd)
 	{
@@ -155,6 +214,12 @@ size_t Command<>::println(const char* str)
 	return Command<>::print(str) + Command<>::print("\r\n");
 }
 
+size_t Command<>::println(char* str)
+{
+	return Command<>::print(str) + Command<>::print("\r\n");
+}
+
+
 
 //NOTE: INTENDED TO BE SET UP SO THAT USERS CAN ADD KEYWORDS
 //WITHOUT MODIFYING HEADER FILE
@@ -206,12 +271,13 @@ void Command<>::hook()
 	{
 		char ch = streamRead();
 
-		if(ch == '\n') //if the delimeter has not yet been reached
+		if(ch == '\n' || ch == '\r') //if the delimeter has been reached
 		{
 			//Concatenate the read byte to the string
 			strcat(buf, &ch);
-			//Execute command
-			exec(buf);
+
+			//Execute command if input string isn't empty
+			if(strcmp(buf, "\r") && strcmp(buf, "\n")) exec(buf);
 
 			//Clear the buffer
 			strcpy(buf, "");
@@ -234,20 +300,17 @@ const char* Command<>::getDesc() const
 	return description;
 }
 
-Command<const char*> command("help", [](const char* str){
-	Command<>::println("Available Commands (type \"help\" followed by a command name for more info on the command\":");
-	if(!str) Command<>::help();
-	else Command<>::help(str);
-});
-
-(
-Command<int> cmd_echo("echo", [](int state)
+Command<int> command("echo [ON/OFF]",
+	"Turns echo ON or OFF. When echo is ON, commands invoked will be printed back to the user.",
+	[](int state)
 	{
 		Command<>::echo = state;
 	}
 );
 
-Command<int> cmd_verbose("verbose", [](int state)
+Command<int> cmd_verbose("verbose [ON/OFF]",
+	"Turns verbose mode ON or OFF. When verbose mode is ON, the user will be informed when a command does not exist.",
+	[](int state)
 	{
 		Command<>::verbose = state;
 	}
