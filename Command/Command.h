@@ -41,6 +41,7 @@ public:
 	static size_t print(double, unsigned char = 2);
 
 	static size_t println(const char* = "");
+	static size_t println(char*);
 	template<class T>
 	static size_t println(const T&, unsigned char = 0);
 
@@ -70,10 +71,18 @@ public:
 	// specifically for integers. converts special keywords to integers
 	static int convertArgKeyword(const char*);
 
+	// overload new/delete so commands will manage their own memory
+	// static void* operator new(size_t);
+	// static void operator delete(void*);
+
 	// templated String-Functionality Constructor
+	// both with and without description
 	template<class L>
 	Command(const char*, const L&);
+	template<class L>
+	Command(const char*, const char*, const L&);
 	Command(const char*, void(*)());
+	Command(const char*, const char*, void(*)());
 	virtual ~Command();  // deconstructor
 
 	//Copying and re-assignment of Commands is disabled
@@ -89,15 +98,16 @@ public:
 	const char* getSignature() const;
 	const char* getDesc() const;
 
-	static void help();
-	static void help(const char*);
+	static void help(const char* = nullptr);
 
 protected:
 	//Child-RunLambda-Overload Constructor
 	// for child classes to overload runLambda() and invLambda(), uses void pointers
 	// to point to both the lambda and the parameters to be passed to the lambda function
 	template<class L>
-	Command(const char*, const L&, void (*)(void*), void (*)(void*, void*[])); // magic
+	Command(const char*, const char*, const L&, void (*)(void*), void (*)(void*, void*[])); // magic
+		template<class L>
+	Command(const char*, const L&, void (*)(void*), void (*)(void*, void*[])); // indescribable magic
 
 	//Used for entries in a static registry
 	//
@@ -108,9 +118,13 @@ protected:
 
 	//static registry
 	static Node* registry;
+	//static registry of nodes made with new operator
+	static Node* dynReg;
 
 	//back of registry
 	static Node** back;
+	//back of dynReg
+	static Node** dynBack;
 
 	//instance's entry in registry
 	Node* entry;
@@ -118,6 +132,7 @@ protected:
 	//name and functionality
 	const char* signature;
 	const char* description;
+	size_t nameLength;
 	void* lambda;
 	void (*deleteLambda)(void*);
 	void (*runLambda)(void*);
@@ -138,7 +153,11 @@ class Command : public Command<>
 {
 public:
 	//String-Functionality Constructor
-	template<class L> Command(const char*, const L&);
+	template<class L>
+	Command(const char*, const char*, const L&);
+	template<class L>
+	Command(const char*, const L&);
+	Command(const char*, const char*, void(*)(Args...));
 	Command(const char*, void(*)(Args...));
 
 	//Copying and re-assignment of Commands is disabled
@@ -165,8 +184,8 @@ public:
 //referred to as "capturing")
 template<class... Args>
 template<class L>
-inline Command<Args...>::Command(const char* signature, const L& lambda)
-	: Command<>(signature, lambda, [](void* l){
+inline Command<Args...>::Command(const char* signature, const char* description, const L& lambda)
+	: Command<>(signature, description, lambda, [](void* l){
 		char* args[sizeof...(Args)];
 		for(unsigned char i = 0; i < sizeof...(Args); ++i) args[i] = nullptr;
 		for(unsigned char i = 0; i < sizeof...(Args); ++i)
@@ -182,7 +201,8 @@ inline Command<Args...>::Command(const char* signature, const L& lambda)
 		}
 		unsigned char index = sizeof...(Args);
 		((L*)l)->operator()(Command<>::convertArg<Args>(args[--index])...);
-	}, [](void* l, void* a[]){
+	},
+	[](void* l, void* a[]){
 		unsigned char index = sizeof...(Args);
 		((L*)l)->operator()((*(Args*)(a[--index]))...);
 	})
@@ -190,35 +210,69 @@ inline Command<Args...>::Command(const char* signature, const L& lambda)
 
 }
 
+template<class... Args>
+template<class L>
+inline Command<Args...>::Command(const char* signature, const L& lambda)
+	: Command<Args...>(signature, nullptr, lambda)
+{
+
+}
+
 //Alternate to String-functionality constructor (uses function pointer
 //instead of lambda)
 template<class... Args>
+Command<Args...>::Command(const char* signature, const char* description, void(*func)(Args...))
+	: Command<Args...>(signature, description, [&](Args... args) { func(args...); })
+{
+
+}
+
+template<class... Args>
 Command<Args...>::Command(const char* signature, void(*func)(Args...))
-	: Command<Args...>(signature, [&](Args... args) { func(args...); })
+	: Command<Args...>(signature, nullptr, func)
 {
 
 }
 
 //Child-RunLambda-Overload constructor for Command<>
 template<class L>
-inline Command<>::Command(const char* signature, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
+inline Command<>::Command(const char* signature, const char* description, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
 	: entry(new Command::Node(this, nullptr)),
-		signature(signature), lambda(new L(lambda)),
+		signature(signature), description(description),
+		lambda(new L(lambda)),
 		deleteLambda([](void* l){ delete ((L*)l); }),
 		runLambda(runLambda), invLambda(invLambda)
 {
+	char cmdbuf[bufferSize];
+	strcpy(cmdbuf, signature);
+	nameLength = strlen(strtok(cmdbuf, " (),\r\n"));
+
 	if(registry == nullptr) registry = entry;
 	else *back = entry;
 
 	back = &(entry->next);
 }
 
+template<class L>
+inline Command<>::Command(const char* signature, const L& lambda, void(*runLambda)(void*), void(*invLambda)(void*, void*[]))
+	: Command<>(signature, nullptr, lambda, runLambda, invLambda)
+{
+
+}
+
 //Specialization of String-Functionality constructor for Command<>
 template<class L>
-inline Command<>::Command(const char* signature, const L& lambda)
-	: Command(signature, lambda,
+inline Command<>::Command(const char* signature, const char* description, const L& lambda)
+	: Command<>(signature, description, lambda,
 		[](void*l){ ((L*)l)->operator()(); },
 		[](void* l, void* a[]){ ((L*)l)->operator()(); })
+{
+
+}
+
+template<class L>
+inline Command<>::Command(const char* signature, const L& lambda)
+	: Command<>(signature, nullptr, lambda)
 {
 
 }
@@ -288,11 +342,8 @@ inline const char* Command<>::convertArg<const char*>(const char* s)
 }
 
 //doubles as easy command static function syntax
-//and as "help" command
-extern Command<const char*> command;
-
-//command to turn echo on/off
-extern Command<int> cmd_echo;
+//and as "echo" command when no command is specified
+extern Command<int> command;
 
 //command to turn verbose on/off
 extern Command<int> cmd_verbose;
